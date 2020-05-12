@@ -9,10 +9,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bc2983d8864f9344e9d08b455ac1e381, type: 3}
-  m_Name: State
+  m_Script: {fileID: 11500000, guid: 140a4c3707df59841b9c117cbda39784, type: 3}
+  m_Name: New Behavior Graph
   m_EditorClassIdentifier: 
-  PreActions:
-  - {fileID: 11400000, guid: 5514e7fa439a2b54eb9afd1f7c7d4344, type: 2}
-  OnActions: []
-  AftActions: []

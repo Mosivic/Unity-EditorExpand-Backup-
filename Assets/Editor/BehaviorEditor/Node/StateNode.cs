@@ -1,8 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEditor;
 using UnityEditorInternal;
+using UnityEngine;
 
 namespace Ms.BehaviorEditor
 {
@@ -10,6 +10,8 @@ namespace Ms.BehaviorEditor
     {
         bool isCollapse;
         public State state;
+
+        Vector2 scrollDistance;
 
         SerializedObject serializedState;
         ReorderableList preStateList;
@@ -21,12 +23,12 @@ namespace Ms.BehaviorEditor
         {
             Collapse();
             Layout();
-
         }
 
 
         void Layout()
         {
+            
             isCollapse = GUILayout.Toggle(isCollapse, "展开");
             GUILayout.Label("Choose State");
             state = (State)EditorGUILayout.ObjectField(state, typeof(State), false);
@@ -44,10 +46,15 @@ namespace Ms.BehaviorEditor
             if(serializedState!=null)
             {
                 serializedState.Update();
+                HandleReorderableList(preStateList, "Pre State");
                 HandleReorderableList(onStateList, "On State");
+                HandleReorderableList(aftStateList, "Ater State");
+                scrollDistance=GUILayout.BeginScrollView(scrollDistance);
                 preStateList.DoLayoutList();
                 onStateList.DoLayoutList();
                 aftStateList.DoLayoutList();
+                GUILayout.EndScrollView();
+
                 serializedState.ApplyModifiedProperties();
             }
 
@@ -78,6 +85,9 @@ namespace Ms.BehaviorEditor
                 windowRect.height = 300;
             }
         }
+
+
+
 
     }
 }

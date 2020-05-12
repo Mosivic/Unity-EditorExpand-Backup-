@@ -8,14 +8,8 @@ namespace Ms.BehaviorEditor
 {
     public class Connect
     {
-        public BaseNode LeftNode { get; set; }
-        public BaseNode RightNode { get; set; }
+        public Vector2 connect;
 
-        public Connect(BaseNode leftNode,BaseNode rightNode)
-        {
-            LeftNode = leftNode;
-            RightNode = rightNode;
-        }
     }
 }
 

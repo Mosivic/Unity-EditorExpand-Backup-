@@ -7,7 +7,15 @@ namespace Ms.BehaviorEditor
     public class StateManager : MonoBehaviour
     {
         public float health;
-        public State current;
+        public BaseNode currentNode;
+
+
+
+
+
+
+
+
     }
 }
 

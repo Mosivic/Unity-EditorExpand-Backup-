@@ -6,15 +6,11 @@ namespace Ms.BehaviorEditor
 {
     public abstract class BaseNode : ScriptableObject
     {
+        public float key;
         public Rect windowRect;
         public string windowTitle;
-        public List<Connect> selfConnects = new List<Connect>();
 
         public abstract void DrawWindow();
-
-
-
-     
 
     }
 }

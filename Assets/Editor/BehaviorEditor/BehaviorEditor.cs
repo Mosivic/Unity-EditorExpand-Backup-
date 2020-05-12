@@ -9,20 +9,27 @@ namespace Ms.BehaviorEditor
     public class BehaviorEditor : EditorWindow
     {
         #region Variables
+        Rect menuBar;
+        float menuBarHeight=20f;
+
+
         static List<BaseNode> nodes = new List<BaseNode>();
-        static List<Connect> connects = new List<Connect>();
+        static List<Vector2> connects = new List<Vector2>();
 
         Vector3 mousePostion;
         bool makeTransition;
         bool clickedOnWindow;
 
         BaseNode selectedNode;
-        BaseNode targetNode;
 
+
+        public static BehaviorGraph currentGraph;
+        public float currentkey;
+        public List<float> index=new List<float>();
 
         public enum UseActions
         {
-            addState,
+            addNodeState,
             deleteNode,
             deleteTransition,
             addCommentNode,
@@ -50,19 +57,37 @@ namespace Ms.BehaviorEditor
         {
             nodes.Clear();
             connects.Clear();
+            index.Clear();
+            currentGraph = null;
+            currentkey = 0;
         }
 
         private void OnGUI()
         {
             Event e = Event.current;
             mousePostion = e.mousePosition;
-
-
             UserInput(e);
+            DrawMenuBar();
             DrawConnects();
             DrawWindows();
 
             if (GUI.changed) Repaint();
+        }
+
+        void DrawMenuBar()
+        {
+            menuBar = new Rect(0, 0, position.width,menuBarHeight );
+            GUILayout.BeginArea(menuBar,EditorStyles.toolbar);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Choose Current Graph:");
+            currentGraph= (BehaviorGraph)EditorGUILayout.ObjectField(currentGraph, typeof(BehaviorGraph), false);
+            if(currentGraph!=null)
+            {
+                if (GUILayout.Button("Load")) LoadGraph();
+                if (GUILayout.Button("Save")) SaveGraph();
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
         }
 
         private void DrawConnects()
@@ -70,8 +95,8 @@ namespace Ms.BehaviorEditor
             if (connects == null) return;
             foreach (var connect in connects)
             {
-                Rect leftRect = connect.LeftNode.windowRect;
-                Rect rightRect = connect.RightNode.windowRect;
+                Rect leftRect = FindNodeByKey(connect.x).windowRect;
+                Rect rightRect = FindNodeByKey(connect.y).windowRect;
                 Vector3 startPos = new Vector3(leftRect.x + leftRect.width, leftRect.y + leftRect.height * 0.5f, 0);
                 Vector3 endPos = new Vector3(rightRect.x, rightRect.y + rightRect.height * 0.5f, 0);
                 DrawConnect(startPos, endPos);
@@ -138,12 +163,10 @@ namespace Ms.BehaviorEditor
             foreach (var r in nodes)
             {
                 //鼠标位置在Node上,Node不存在此Connect,Node不为自身,按下鼠标左键
-                if (r.windowRect.Contains(e.mousePosition)&&!connects.Exists(t=> { return (t.LeftNode == selectedNode && t.RightNode == r); })&& r != selectedNode && e.button == 0 && e.type == EventType.MouseDown)
+                if (r.windowRect.Contains(e.mousePosition)&&!connects.Exists(t=> { return (t.x == selectedNode.key && t.y == r.key); })&& r != selectedNode && e.button == 0 && e.type == EventType.MouseDown)
                 {
-                    Connect connect = new Connect(selectedNode, r);
+                    Vector2 connect = new Vector2(selectedNode.key, r.key);
                     connects.Add(connect);
-                    connect.LeftNode.selfConnects.Add(connect);
-                    connect.RightNode.selfConnects.Add(connect);
                     makeTransition = false;
                     e.Use();
                 }
@@ -183,7 +206,7 @@ namespace Ms.BehaviorEditor
         {
             GenericMenu menu = new GenericMenu();
             menu.AddSeparator("");
-            menu.AddItem(new GUIContent("Add State"), false, ContextCallback, UseActions.addState);
+            menu.AddItem(new GUIContent("Add State"), false, ContextCallback, UseActions.addNodeState);
             menu.AddItem(new GUIContent("Add Comment"), false, ContextCallback, UseActions.addCommentNode);
             menu.AddItem(new GUIContent("Add Condition"), false, ContextCallback, UseActions.addConditionNode);
             menu.ShowAsContext();
@@ -209,23 +232,27 @@ namespace Ms.BehaviorEditor
             UseActions a = (UseActions)obj;
             switch (a)
             {
-                case UseActions.addState:
+                case UseActions.addNodeState:
                     StateNode stateNode = ScriptableObject.CreateInstance<StateNode>();
+                    stateNode.key = currentkey;
                     stateNode.windowRect = new Rect(mousePostion.x, mousePostion.y, 200, 300);
                     stateNode.windowTitle = "State";
                     nodes.Add(stateNode);
+                    index.Add(currentkey);
+                    currentkey++;
                     break;
                 case UseActions.deleteNode:
                     if (selectedNode != null)
                     {
-                        foreach (var connect in selectedNode.selfConnects)
+                        for (int i = connects.Count-1; i >= 0; i--)
                         {
-                            connects.Remove(connect);
+                            if (connects[i].x == selectedNode.key||connects[i].y==selectedNode.key)
+                            {
+                                connects.Remove(connects[i]);
+                            }
                         }
                         nodes.Remove(selectedNode);
                     }
-                    break;
-                case UseActions.deleteTransition:
                     break;
                 case UseActions.addCommentNode:
                     CommentNode node = new CommentNode()
@@ -237,9 +264,12 @@ namespace Ms.BehaviorEditor
                     break;
                 case UseActions.addConditionNode:
                     ConditionNode transtionNode = ScriptableObject.CreateInstance<ConditionNode>();
+                    transtionNode.key = currentkey;
                     transtionNode.windowRect = new Rect(mousePostion.x, mousePostion.y, 200, 300);
                     transtionNode.windowTitle = "Condition";
                     nodes.Add(transtionNode);
+                    index.Add(currentkey);
+                    currentkey++;
                     break;
                 case UseActions.addConnection:
                     makeTransition = true;
@@ -259,7 +289,39 @@ namespace Ms.BehaviorEditor
             Handles.DrawBezier(startPos, endPos, leftTangent, rightTangent, Color.green, null, 5f);
             GUI.changed = true;
         }
+        
+        public BaseNode FindNodeByKey(float key)
+        {
+            foreach (var node in nodes)
+            {
+                if (node.key == key) return node;
+            }
+            return null;
+        }
 
+        public void SaveGraph()
+        {
+            //string path = "Assets/Resources/graph.asset";
+            //if (currentGraph==null)
+            //{    
+            //    BehaviorGraph graph = ScriptableObject.CreateInstance<BehaviorGraph>();
+            //    AssetDatabase.CreateAsset(graph, path);
+            //    AssetDatabase.SaveAssets();
+            //    AssetDatabase.Refresh();
+            //}
+            //currentGraph= AssetDatabase.LoadAssetAtPath<BehaviorGraph>(path);
+
+            GraphConverter.ConverterToData(nodes, connects, currentGraph);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+        }
+
+        public void LoadGraph()
+        {
+            GraphConverter.ConverterToGraph(currentGraph,out nodes,out connects,out index);
+               
+        }
     }
     #endregion
 }
